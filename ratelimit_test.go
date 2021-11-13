@@ -2,6 +2,7 @@ package xratelimit
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 )
@@ -24,7 +25,7 @@ func TestSetItem(t *testing.T) {
 
 	payload := &RequestLog{
 		Timestamp: time.Now(),
-		Remaining: 1,
+		Counter:   1,
 	}
 
 	key := "127.0.0.1"
@@ -38,8 +39,8 @@ func TestSetItem(t *testing.T) {
 		t.Errorf("Expected <GetItem> to return data, instead got: %s", err.Error())
 	}
 
-	if data.Remaining != 1 {
-		t.Errorf("Expected <data.Remaining> to be '1', instead got: %d", data.Remaining)
+	if data.Counter != 1 {
+		t.Errorf("Expected <data.Remaining> to be '1', instead got: %d", data.Counter)
 	}
 
 	t.Cleanup(func() {
@@ -47,4 +48,32 @@ func TestSetItem(t *testing.T) {
 			t.Errorf("Error occured in clean-up function")
 		}
 	})
+}
+
+func TestConsume(t *testing.T) {
+	var w sync.WaitGroup
+
+	redis := NewRedisStore()
+	rl := New(redis, RateLimitConfig{
+		Duration: time.Second * 60,
+		Limit:    10,
+	})
+
+	key := "127.0.0.1"
+
+	for i := 0; i < 9; i++ {
+		w.Add(1)
+		go func(index int) {
+			defer w.Done()
+
+			time.Sleep(time.Second * (1 + time.Duration(index)))
+
+			_, err := rl.Consume(context.Background(), key)
+			if err != nil {
+				t.Errorf("Expected err to be nil, instead got: %s", err.Error())
+			}
+		}(i)
+	}
+
+	w.Wait()
 }
