@@ -2,4 +2,7 @@ module github.com/Mayowa-Ojo/x-ratelimit
 
 go 1.16
 
-require github.com/go-redis/redis/v8 v8.11.4 // indirect
+require (
+	github.com/go-redis/redis/v8 v8.11.4 // indirect
+	github.com/stretchr/testify v1.7.0 // indirect
+)
