@@ -34,7 +34,7 @@ func TestMiddlewareStd(t *testing.T) {
 	})
 	is.NotZero(rl)
 
-	ms := NewMiddlewareStd(rl, WithIpAddress("middleware-std-test-ip")).Handler(handler)
+	ms := NewMiddlewareStd(rl, WithIpAddressStd("middleware-std-test-ip")).Handler(handler)
 	is.NotZero(ms)
 
 	for i := 0; i < numRequests; i++ {

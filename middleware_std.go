@@ -12,9 +12,9 @@ type MiddlewareStd struct {
 	IpAddress       string
 }
 
-type Option func(*MiddlewareStd)
+type OptionStd func(*MiddlewareStd)
 
-func NewMiddlewareStd(rl *RateLimit, options ...Option) *MiddlewareStd {
+func NewMiddlewareStd(rl *RateLimit, options ...OptionStd) *MiddlewareStd {
 	ms := &MiddlewareStd{
 		RateLimit:       rl,
 		OnError:         DefaultErrMiddlewareHandler,
@@ -29,19 +29,19 @@ func NewMiddlewareStd(rl *RateLimit, options ...Option) *MiddlewareStd {
 	return ms
 }
 
-func WithOnError(onError ErrMiddlewareHandler) Option {
+func WithOnErrorStd(onError ErrMiddlewareHandler) OptionStd {
 	return func(ms *MiddlewareStd) {
 		ms.OnError = onError
 	}
 }
 
-func WithOnLimitExceeded(onLimitExceeded RateLimitExceededHandler) Option {
+func WithOnLimitExceededStd(onLimitExceeded RateLimitExceededHandler) OptionStd {
 	return func(ms *MiddlewareStd) {
 		ms.OnLimitExceeded = onLimitExceeded
 	}
 }
 
-func WithIpAddress(ip string) Option {
+func WithIpAddressStd(ip string) OptionStd {
 	return func(ms *MiddlewareStd) {
 		ms.IpAddress = ip
 	}
