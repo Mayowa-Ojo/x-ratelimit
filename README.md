@@ -36,19 +36,19 @@ var (
 func main() {
    mux = http.NewServeMux()
 
-	handler := func(rw http.ResponseWriter, r *http.Request) {
-		rw.WriteHeader(http.StatusOK)
-		rw.Write([]byte("Hello World..."))
-	}
+   handler := func(rw http.ResponseWriter, r *http.Request) {
+      rw.WriteHeader(http.StatusOK)
+      rw.Write([]byte("Hello World..."))
+   }
 
-	redis := limiter.NewRedisStore()
+   redis := limiter.NewRedisStore()
 
-	rl := limiter.New(redis, RateLimitConfig{
-		Duration: duration,
-		Limit:    limit,
-	})
+   rl := limiter.New(redis, RateLimitConfig{
+      Duration: duration,
+      Limit:    limit,
+   })
 
-	ms := limiter.NewMiddlewareStd(rl, limiter.WithIpAddressStd("ip-address")).Handler(handler)
+   ms := limiter.NewMiddlewareStd(rl, limiter.WithIpAddressStd("ip-address")).Handler(handler)
 
    mux.Handle("/", ms.Handler(http.HandlerFunc(handler)))
 
