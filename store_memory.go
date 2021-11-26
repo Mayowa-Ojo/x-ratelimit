@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -53,7 +54,7 @@ func NewMemoryStore(options ...OptionMemory) *MemoryStore {
 	logs := NewHashTable()
 
 	ms := &MemoryStore{
-		namespace: "",
+		namespace: "x-ratelimit",
 		ttl:       MemoryTTL,
 		logs:      logs,
 	}
@@ -72,6 +73,7 @@ func WithTTL(ttl time.Duration) OptionMemory {
 }
 
 func (ms *MemoryStore) GetItem(ctx context.Context, key string) (*RequestLog, error) {
+	key = fmt.Sprintf("%s:%s", ms.namespace, key)
 	entries := ms.logs.entries
 	capacity := cap(ms.logs.entries)
 	index := ms.hashKey(key, capacity)
@@ -100,6 +102,7 @@ func (ms *MemoryStore) SetItem(ctx context.Context, key string, payload *Request
 	ms.Lock()
 	defer ms.Unlock()
 
+	key = fmt.Sprintf("%s:%s", ms.namespace, key)
 	capacity := cap(ms.logs.entries)
 	index := ms.hashKey(key, capacity)
 
@@ -144,6 +147,7 @@ func (ms *MemoryStore) SetItem(ctx context.Context, key string, payload *Request
 }
 
 func (ms *MemoryStore) DeleteItem(ctx context.Context, key string) error {
+	key = fmt.Sprintf("%s:%s", ms.namespace, key)
 	capacity := cap(ms.logs.entries)
 	index := ms.hashKey(key, capacity)
 	entries := ms.logs.entries
