@@ -1,6 +1,6 @@
 ## X-Ratelimit
 
-Exploring rate-limiting techniques with a simple implementation of the fixed-window algorithm. This algorithm uses a window size (n seconds) to track the fixed-window algorithm rate. There is a counter that is incremented on each request, and a request can be discarded if it exceeds a set threshold (max requests / n seconds) within the timeframe.
+Exploring [rate-limiting](https://cloud.google.com/architecture/rate-limiting-strategies-techniques) techniques with a simple implementation of the fixed-window algorithm. This algorithm uses a window size (n seconds) to track the fixed-window algorithm rate. There is a counter that is incremented on each request, and a request can be discarded if it exceeds a set threshold (max requests / n seconds) within the timeframe.
 
 > One drawback of this algorithm is that the system can be overloaded at the boundary of the window.
 
