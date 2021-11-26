@@ -2,103 +2,25 @@ package xratelimit
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
-
-	redis "github.com/go-redis/redis/v8"
 )
-
-const RedisAddr = "localhost:6379"
-
-var ErrRateLimitExceeded = errors.New("client has exceeded rate limit for given period")
-
-// Redis store
-type RedisStore struct {
-	client    *redis.Client
-	namespace string
-	ttl       time.Duration
-}
-
-func NewRedisStore() *RedisStore {
-	redis := redis.NewClient(&redis.Options{
-		Addr:        RedisAddr,
-		Password:    "",
-		DB:          0,
-		MaxRetries:  10,
-		DialTimeout: 15 * time.Second,
-	})
-
-	return &RedisStore{
-		client:    redis,
-		namespace: "x-ratelimit",
-		ttl:       0,
-	}
-}
-
-func (s *RedisStore) GetItem(ctx context.Context, key string) (*RequestLog, error) {
-	var log *RequestLog
-	key = fmt.Sprintf("%s:%s", s.namespace, key)
-
-	val, err := s.client.Get(ctx, key).Result()
-	if err != nil {
-		return nil, err
-	}
-
-	if err := json.Unmarshal([]byte(val), &log); err != nil {
-		return nil, err
-	}
-
-	return log, nil
-}
-
-func (s *RedisStore) SetItem(ctx context.Context, key string, payload *RequestLog) error {
-	key = fmt.Sprintf("%s:%s", s.namespace, key)
-
-	b, err := json.Marshal(payload)
-	if err != nil {
-		return err
-	}
-
-	if err := s.client.Set(ctx, key, b, s.ttl).Err(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *RedisStore) DeleteItem(ctx context.Context, key string) error {
-	key = fmt.Sprintf("%s:%s", s.namespace, key)
-
-	if err := s.client.Del(ctx, key).Err(); err != nil {
-		return err
-	}
-
-	return nil
-}
 
 type RateLimitConfig struct {
 	Duration  time.Duration
 	Limit     int
-	Skip      func() bool
-	Whitelist []string
+	Skip      func(rw http.Request, r *http.Request) bool // cond for a request to be skipped
+	Whitelist []string                                    // whitelisted ips
 }
 
 type RateLimit struct {
 	RateLimitConfig
 	Store
 	m sync.Mutex
-}
-
-type Store interface {
-	GetItem(ctx context.Context, key string) (*RequestLog, error)
-	SetItem(ctx context.Context, key string, payload *RequestLog) error
-	DeleteItem(ctx context.Context, key string) error
 }
 
 type RequestLog struct {

@@ -24,17 +24,25 @@ type BadgerStore struct {
 type OptionBadger func(*BadgerStore)
 
 func NewBadgerStore(options ...OptionBadger) (*BadgerStore, error) {
+	bs := &BadgerStore{
+		client:    nil,
+		namespace: "x-ratelimit",
+		ttl:       time.Second * BadgerTTL,
+		path:      BadgerPath,
+	}
+
 	db, err := badger.Open(badger.DefaultOptions(BadgerPath))
 	if err != nil {
 		return nil, err
 	}
 
-	return &BadgerStore{
-		client:    db,
-		namespace: "x-ratelimit",
-		ttl:       time.Second * BadgerTTL,
-		path:      BadgerPath,
-	}, nil
+	bs.client = db
+
+	for _, opt := range options {
+		opt(bs)
+	}
+
+	return bs, nil
 }
 
 func WithPath(path string) OptionBadger {
