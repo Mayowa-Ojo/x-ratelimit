@@ -13,8 +13,8 @@ import (
 type RateLimitConfig struct {
 	Duration  time.Duration
 	Limit     int
-	Skip      func(rw http.Request, r *http.Request) bool // cond for a request to be skipped
-	Whitelist []string                                    // whitelisted ips
+	Skip      func(rw http.ResponseWriter, r *http.Request) bool // cond for a request to be skipped
+	Whitelist []string                                           // whitelisted ips
 }
 
 type RateLimit struct {
