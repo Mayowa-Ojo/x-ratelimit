@@ -64,6 +64,11 @@ func (mg *MiddlewareGin) Handler() gin.HandlerFunc {
 			key = mg.IpAddress
 		}
 
+		if mg.RateLimit.Skip != nil && mg.RateLimit.Skip(ctx.Writer, ctx.Request) {
+			ctx.Next()
+			return
+		}
+
 		if _, err := mg.RateLimit.Consume(ctx, key); err != nil {
 			if err == ErrRateLimitExceeded {
 				mg.OnLimitExceeded(ctx.Writer, ctx.Request)

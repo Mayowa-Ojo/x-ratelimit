@@ -66,6 +66,10 @@ func (mw *MiddlewareEcho) Handler(h echo.HandlerFunc) echo.HandlerFunc {
 			key = mw.IpAddress
 		}
 
+		if mw.RateLimit.Skip != nil && mw.RateLimit.Skip(c.Response(), c.Request()) {
+			return h(c)
+		}
+
 		_, err := mw.RateLimit.Consume(context.Background(), key)
 		if err != nil {
 			if err == ErrRateLimitExceeded {

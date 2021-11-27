@@ -63,6 +63,11 @@ func (m *MiddlewareStd) Handler(h http.Handler) http.Handler {
 			key = m.IpAddress
 		}
 
+		if m.RateLimit.Skip != nil && m.RateLimit.Skip(rw, r) {
+			h.ServeHTTP(rw, r)
+			return
+		}
+
 		_, err := m.RateLimit.Consume(r.Context(), key)
 		if err != nil {
 			if err == ErrRateLimitExceeded {
