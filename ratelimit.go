@@ -35,13 +35,17 @@ func New(store Store, config RateLimitConfig) *RateLimit {
 	}
 }
 
-func (c *RateLimit) Consume(ctx context.Context, key string) (*RequestLog, error) {
-	c.m.Lock()
-	defer c.m.Unlock()
+func (rl *RateLimit) Consume(ctx context.Context, key string) (*RequestLog, error) {
+	rl.m.Lock()
+	defer rl.m.Unlock()
 
 	var payload RequestLog
 
-	rlog, err := c.Store.GetItem(ctx, key)
+	if rl.isWhitelistedIp(key) {
+		return nil, nil
+	}
+
+	rlog, err := rl.Store.GetItem(ctx, key)
 	if err != nil {
 		// check nil error
 		if strings.Split(err.Error(), ": ")[1] != "nil" {
@@ -51,11 +55,11 @@ func (c *RateLimit) Consume(ctx context.Context, key string) (*RequestLog, error
 		payload.Timestamp = time.Now()
 		payload.Counter = 1
 
-		if err := c.Store.SetItem(ctx, key, &payload); err != nil {
+		if err := rl.Store.SetItem(ctx, key, &payload); err != nil {
 			return nil, err
 		}
 
-		rlog, err := c.Store.GetItem(ctx, key)
+		rlog, err := rl.Store.GetItem(ctx, key)
 		if err != nil {
 			return nil, err
 		}
@@ -63,23 +67,23 @@ func (c *RateLimit) Consume(ctx context.Context, key string) (*RequestLog, error
 		return rlog, nil
 	}
 
-	if time.Since(rlog.Timestamp) >= c.RateLimitConfig.Duration {
+	if time.Since(rlog.Timestamp) >= rl.RateLimitConfig.Duration {
 		// Reset counter
-		return c.Reset(ctx, key)
+		return rl.Reset(ctx, key)
 	}
 
-	if rlog.Counter >= c.RateLimitConfig.Limit {
+	if rlog.Counter >= rl.RateLimitConfig.Limit {
 		return nil, ErrRateLimitExceeded
 	}
 
 	payload.Timestamp = rlog.Timestamp
 	payload.Counter = rlog.Counter + 1
 
-	if err := c.Store.SetItem(ctx, key, &payload); err != nil {
+	if err := rl.Store.SetItem(ctx, key, &payload); err != nil {
 		return nil, err
 	}
 
-	rlog, err = c.Store.GetItem(ctx, key)
+	rlog, err = rl.Store.GetItem(ctx, key)
 	if err != nil {
 		return nil, err
 	}
@@ -87,8 +91,8 @@ func (c *RateLimit) Consume(ctx context.Context, key string) (*RequestLog, error
 	return rlog, nil
 }
 
-func (c *RateLimit) Remaining(ctx context.Context, key string) (*int, error) {
-	rlog, err := c.Store.GetItem(ctx, key)
+func (rl *RateLimit) Remaining(ctx context.Context, key string) (*int, error) {
+	rlog, err := rl.Store.GetItem(ctx, key)
 	if err != nil {
 		return nil, err
 	}
@@ -96,17 +100,17 @@ func (c *RateLimit) Remaining(ctx context.Context, key string) (*int, error) {
 	return &rlog.Counter, nil
 }
 
-func (c *RateLimit) Reset(ctx context.Context, key string) (*RequestLog, error) {
+func (rl *RateLimit) Reset(ctx context.Context, key string) (*RequestLog, error) {
 	var payload RequestLog
 
 	payload.Timestamp = time.Now()
 	payload.Counter = 1
 
-	if err := c.Store.SetItem(ctx, key, &payload); err != nil {
+	if err := rl.Store.SetItem(ctx, key, &payload); err != nil {
 		return nil, err
 	}
 
-	rlog, err := c.Store.GetItem(ctx, key)
+	rlog, err := rl.Store.GetItem(ctx, key)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +118,7 @@ func (c *RateLimit) Reset(ctx context.Context, key string) (*RequestLog, error) 
 	return rlog, nil
 }
 
-func (c *RateLimit) GetIp(r *http.Request) (string, error) {
+func (rl *RateLimit) GetIp(r *http.Request) (string, error) {
 	ip := r.Header.Get("x-real-ip")
 	netIp := net.ParseIP(ip)
 	if netIp != nil {
@@ -142,4 +146,14 @@ func (c *RateLimit) GetIp(r *http.Request) (string, error) {
 	}
 
 	return "", errors.New("ip not found")
+}
+
+func (rl *RateLimit) isWhitelistedIp(ip string) bool {
+	for _, v := range rl.Whitelist {
+		if strings.EqualFold(v, ip) {
+			return true
+		}
+	}
+
+	return false
 }
